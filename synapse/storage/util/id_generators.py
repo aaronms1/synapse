@@ -23,7 +23,11 @@ import attr
 from typing_extensions import Deque
 
 from synapse.metrics.background_process_metrics import run_as_background_process
-from synapse.storage.database import DatabasePool, LoggingTransaction
+from synapse.storage.database import (
+    DatabasePool,
+    LoggingDatabaseConnection,
+    LoggingTransaction,
+)
 from synapse.storage.util.sequence import PostgresSequenceGenerator
 
 logger = logging.getLogger(__name__)
@@ -548,7 +552,7 @@ class MultiWriterIdGenerator:
                 # do.
                 break
 
-    def _update_stream_positions_table_txn(self, txn):
+    def _update_stream_positions_table_txn(self, txn: LoggingTransaction):
         """Update the `stream_positions` table with newly persisted position.
         """
 
@@ -569,6 +573,19 @@ class MultiWriterIdGenerator:
 
         pos = (self.get_current_token_for_writer(self._instance_name),)
         txn.execute(sql, (self._stream_name, self._instance_name, pos))
+
+    def _update_stream_positions_table_conn(self, conn: LoggingDatabaseConnection):
+        # We use autocommit here so that we don't have to go through a
+        # transaction dance, which a) adds latency and b) runs the risk of
+        # serialization errors.
+        try:
+            assert hasattr(conn.conn, "autocommit")
+            conn.conn.autocommit = True  # type: ignore
+
+            with conn.cursor(txn_name="MultiWriterIdGenerator._update_table") as cur:
+                self._update_stream_positions_table_txn(cur)
+        finally:
+            conn.conn.autocommit = False  # type: ignore
 
 
 @attr.s(slots=True)
@@ -633,9 +650,8 @@ class _MultiWriterCtxManager:
         # We only do this on the success path so that the persisted current
         # position points to a persisted row with the correct instance name.
         if self.id_gen._writers:
-            await self.id_gen._db.runInteraction(
-                "MultiWriterIdGenerator._update_table",
-                self.id_gen._update_stream_positions_table_txn,
+            await self.id_gen._db.runWithConnection(
+                self.id_gen._update_stream_positions_table_conn,
             )
 
         return False
