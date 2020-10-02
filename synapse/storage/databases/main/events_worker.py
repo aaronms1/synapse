@@ -1243,27 +1243,6 @@ class EventsWorkerStore(SQLBaseStore):
 
         return rows, to_token, True
 
-    async def is_event_after(self, event_id1, event_id2):
-        """Returns True if event_id1 is after event_id2 in the stream
-        """
-        to_1, so_1 = await self.get_event_ordering(event_id1)
-        to_2, so_2 = await self.get_event_ordering(event_id2)
-        return (to_1, so_1) > (to_2, so_2)
-
-    @cached(max_entries=5000)
-    async def get_event_ordering(self, event_id):
-        res = await self.db_pool.simple_select_one(
-            table="events",
-            retcols=["topological_ordering", "stream_ordering"],
-            keyvalues={"event_id": event_id},
-            allow_none=True,
-        )
-
-        if not res:
-            raise SynapseError(404, "Could not find event %s" % (event_id,))
-
-        return (int(res["topological_ordering"]), int(res["stream_ordering"]))
-
     async def get_next_event_to_expire(self) -> Optional[Tuple[str, int]]:
         """Retrieve the entry with the lowest expiry timestamp in the event_expiry
         table, or None if there's no more event to expire.
