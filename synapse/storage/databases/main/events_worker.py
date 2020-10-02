@@ -25,7 +25,7 @@ from typing_extensions import Literal
 from twisted.internet import defer
 
 from synapse.api.constants import EventTypes
-from synapse.api.errors import NotFoundError, SynapseError
+from synapse.api.errors import NotFoundError
 from synapse.api.room_versions import (
     KNOWN_ROOM_VERSIONS,
     EventFormatVersions,
@@ -43,7 +43,7 @@ from synapse.storage.database import DatabasePool
 from synapse.storage.engines import PostgresEngine
 from synapse.storage.util.id_generators import MultiWriterIdGenerator, StreamIdGenerator
 from synapse.types import Collection, get_domain_from_id
-from synapse.util.caches.descriptors import Cache, cached
+from synapse.util.caches.descriptors import Cache
 from synapse.util.iterutils import batch_iter
 from synapse.util.metrics import Measure
 
