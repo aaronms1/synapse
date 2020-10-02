@@ -575,9 +575,9 @@ class MultiWriterIdGenerator:
         txn.execute(sql, (self._stream_name, self._instance_name, pos))
 
     def _update_stream_positions_table_conn(self, conn: LoggingDatabaseConnection):
-        # We use autocommit here so that we don't have to go through a
-        # transaction dance, which a) adds latency and b) runs the risk of
-        # serialization errors.
+        # We use autocommit/read committed here so that we don't have to go
+        # through a transaction dance, which a) adds latency and b) runs the
+        # risk of serialization errors.
         try:
             conn.conn.set_session(isolation_level="read committed", autocommit=True)  # type: ignore
 
