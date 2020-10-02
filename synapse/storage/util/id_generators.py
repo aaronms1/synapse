@@ -579,13 +579,12 @@ class MultiWriterIdGenerator:
         # transaction dance, which a) adds latency and b) runs the risk of
         # serialization errors.
         try:
-            assert hasattr(conn.conn, "autocommit")
-            conn.conn.autocommit = True  # type: ignore
+            conn.conn.set_session(isolation_level="read committed", autocommit=True)  # type: ignore
 
             with conn.cursor(txn_name="MultiWriterIdGenerator._update_table") as cur:
                 self._update_stream_positions_table_txn(cur)
         finally:
-            conn.conn.autocommit = False  # type: ignore
+            conn.conn.set_session(isolation_level="repeatable read", autocommit=False)  # type: ignore
 
 
 @attr.s(slots=True)
