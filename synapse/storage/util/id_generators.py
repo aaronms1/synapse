@@ -579,7 +579,7 @@ class MultiWriterIdGenerator:
         # through a transaction dance, which a) adds latency and b) runs the
         # risk of serialization errors.
         try:
-            conn.conn.set_session(isolation_level="read committed")  # type: ignore
+            conn.conn.set_session(autocommit=True)  # type: ignore
 
             with conn.cursor(txn_name="MultiWriterIdGenerator._update_table") as cur:
                 self._update_stream_positions_table_txn(cur)
@@ -589,7 +589,7 @@ class MultiWriterIdGenerator:
             conn.rollback()
             raise
         finally:
-            conn.conn.set_session(isolation_level="repeatable read")  # type: ignore
+            conn.conn.set_session(autocommit=False)  # type: ignore
 
 
 @attr.s(slots=True)

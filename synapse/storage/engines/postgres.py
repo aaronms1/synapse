@@ -108,6 +108,7 @@ class PostgresEngine(BaseDatabaseEngine):
         db_conn.set_isolation_level(
             self.module.extensions.ISOLATION_LEVEL_REPEATABLE_READ
         )
+        db_conn.set_session(self.module.extensions.ISOLATION_LEVEL_REPEATABLE_READ)
 
         # Set the bytea output to escape, vs the default of hex
         cursor = db_conn.cursor()
