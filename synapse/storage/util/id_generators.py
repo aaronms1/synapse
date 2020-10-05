@@ -574,18 +574,6 @@ class MultiWriterIdGenerator:
         pos = (self.get_current_token_for_writer(self._instance_name),)
         txn.execute(sql, (self._stream_name, self._instance_name, pos))
 
-    def _update_stream_positions_table_conn(self, conn: LoggingDatabaseConnection):
-        # We use autocommit/read committed here so that we don't have to go
-        # through a transaction dance, which a) adds latency and b) runs the
-        # risk of serialization errors.
-        try:
-            conn.conn.set_session(autocommit=True)  # type: ignore
-
-            with conn.cursor(txn_name="MultiWriterIdGenerator._update_table") as cur:
-                self._update_stream_positions_table_txn(cur)
-        finally:
-            conn.conn.set_session(autocommit=False)  # type: ignore
-
 
 @attr.s(slots=True)
 class _AsyncCtxManagerWrapper:
@@ -649,8 +637,10 @@ class _MultiWriterCtxManager:
         # We only do this on the success path so that the persisted current
         # position points to a persisted row with the correct instance name.
         if self.id_gen._writers:
-            await self.id_gen._db.runWithConnection(
-                self.id_gen._update_stream_positions_table_conn,
+            await self.id_gen._db.runInteraction(
+                "MultiWriterIdGenerator._update_table",
+                self.id_gen._update_stream_positions_table_txn,
+                db_autocommit=True,
             )
 
         return False
