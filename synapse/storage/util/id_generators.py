@@ -583,11 +583,6 @@ class MultiWriterIdGenerator:
 
             with conn.cursor(txn_name="MultiWriterIdGenerator._update_table") as cur:
                 self._update_stream_positions_table_txn(cur)
-
-            conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
         finally:
             conn.conn.set_session(autocommit=False)  # type: ignore
 
